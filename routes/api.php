@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CrowdfundingController;
 use App\Http\Controllers\UserController;
 
 // Authentication routes
@@ -11,31 +13,36 @@ Route::prefix('auth')->group(function () {
     Route::post(uri: '/login', action: [AuthController::class, 'login']);
     Route::post('/admin-login', [AuthController::class, 'adminLogin']);
     Route::post('/superadmin-login', [AuthController::class, 'superAdminLogin']);
-
 });
 
 
 // Protected routes
-Route::middleware(['auth:sanctum'])->prefix('user')->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/profile', [UserController::class, 'profile']);
     Route::put('/profile/{id}', [UserController::class, 'updateProfile']);
-
 
     Route::get('/qr', [UserController::class, 'getQrText']);
     Route::get('/qr/image', [UserController::class, 'getQrImage']);
 
+
     // Route::get('/waste/history', [UserController::class, 'wasteHistory']);
     // Route::get('/waste/detail/{id}', [UserController::class, 'wasteDetail']);
 
-    // Route::get('/crowdfunding/campaigns', [UserController::class, 'campaigns']);
-    // Route::get('/crowdfunding/campaign/{id}', [UserController::class, 'campaignDetail']);
-    // Route::post('/crowdfunding/donate', [UserController::class, 'donate']);
-    // Route::get('/crowdfunding/donations', [UserController::class, 'donationHistory']);
+    // Crowdfunding routes
+    Route::prefix(prefix: 'crowdfunding')->group(function () {
 
-    // Route::get('/vouchers', [UserController::class, 'vouchers']);
-    // Route::get('/voucher/{id}', [UserController::class, 'voucherDetail']);
-    // Route::post('/voucher/redeem', [UserController::class, 'redeemVoucher']);
-    // Route::get('/voucher/redeemed', [UserController::class, 'redeemedVouchers']);
+        Route::get('/campaigns', [CrowdfundingController::class, 'campaigns']);
+        Route::get('/campaign/{id}', [CrowdfundingController::class, 'campaignDetail']);
+        Route::post('/donate', [CrowdfundingController::class, 'donate']);
+        Route::get('/donations', [CrowdfundingController::class, 'donationHistory']);
+    });
+   
 
+     Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::post('/scan-qr', [AdminController::class, 'scanQr']);
+    });
+   
     Route::post('/logout', [AuthController::class, 'logout']);
 });
+
+Route::post('/crowdfunding/webhook', [CrowdfundingController::class, 'handleWebhook']);

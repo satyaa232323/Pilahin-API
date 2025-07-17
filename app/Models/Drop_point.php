@@ -2,7 +2,6 @@
 
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
-use Waste_deposit;
 
 class Drop_point extends Model
 {

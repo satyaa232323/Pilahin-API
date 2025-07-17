@@ -21,10 +21,7 @@ class Drop_point extends Model
         return $this->belongsTo(User::class, 'admin_id');
     }
 
-    public function wasteDeposits()
-    {
-        return $this->hasMany(related: Waste_deposit::class, foreignKey: 'location_id');
-    }
+    
 
     public function crowdfundingCampaigns()
     {

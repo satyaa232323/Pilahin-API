@@ -26,4 +26,10 @@ class Crowdfunding_campaign extends Model
     {
         return $this->hasMany(Donation::class, 'campaign_id');
     }
+
+    public function location()
+{
+    return $this->belongsTo(Drop_point::class, 'location_id');
+}
+
 }

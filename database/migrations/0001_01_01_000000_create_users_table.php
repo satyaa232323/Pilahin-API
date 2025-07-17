@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('qr_code')->unique();
+            $table->string('qr_code')->unique()->nullable();
             $table->string('qr_image_url')->nullable();
 
             $table->enum('role', ['user', 'admin', 'superadmin'])->default('user');

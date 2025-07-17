@@ -25,9 +25,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/qr/image', [UserController::class, 'getQrImage']);
 
 
-    // Route::get('/waste/history', [UserController::class, 'wasteHistory']);
-    // Route::get('/waste/detail/{id}', [UserController::class, 'wasteDetail']);
-
+   
     // Crowdfunding routes
     Route::prefix(prefix: 'crowdfunding')->group(function () {
 

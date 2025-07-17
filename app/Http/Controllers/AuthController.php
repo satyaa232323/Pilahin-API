@@ -27,10 +27,10 @@ class AuthController extends Controller
             $validated['password'] = bcrypt($validated['password']);
             $validated['qr_code'] = strtoupper(Str::random(10));
 
-            // Generate QR code image using SVG format (doesn't require imagick)
-            $qrImage = QrCode::format('svg')->size(300)->generate($validated['qr_code']);
-            $path = 'qr_codes/' . $validated['qr_code'] . '.svg';
-            Storage::disk('public')->put($path, $qrImage);
+            // Generate QR code image using png format (doesn't require imagick)
+            $qrImage = QrCode::format(format: 'png')->size(300)->generate($validated['qr_code']);
+            $path = 'qr_codes/' . $validated['qr_code'] . '.png';
+            Storage::disk('public')->put(path: $path, contents: $qrImage);
 
             $validated['qr_image_url'] = Storage::url($path);
 

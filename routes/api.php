@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
 
 // Authentication routes
 
@@ -11,21 +12,17 @@ Route::prefix('auth')->group(function () {
     Route::post('/admin-login', [AuthController::class, 'adminLogin']);
     Route::post('/superadmin-login', [AuthController::class, 'superAdminLogin']);
 
-    // Protected auth routes
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('/logout', [AuthController::class, 'logout']);
-        Route::get('/profile', [AuthController::class, 'profile']);
-    });
 });
 
 
 // Protected routes
-Route::middleware(['auth:sanctum', 'role:user'])->prefix('user')->group(function () {
-    // Route::get('/profile', [UserController::class, 'profile']);
-    // Route::put('/profile', [UserController::class, 'updateProfile']);
+Route::middleware(['auth:sanctum'])->prefix('user')->group(function () {
+    Route::get('/profile', [UserController::class, 'profile']);
+    Route::put('/profile/{id}', [UserController::class, 'updateProfile']);
 
-    // Route::get('/qr', [UserController::class, 'getQrText']);
-    // Route::get('/qr/image', [UserController::class, 'getQrImage']);
+
+    Route::get('/qr', [UserController::class, 'getQrText']);
+    Route::get('/qr/image', [UserController::class, 'getQrImage']);
 
     // Route::get('/waste/history', [UserController::class, 'wasteHistory']);
     // Route::get('/waste/detail/{id}', [UserController::class, 'wasteDetail']);
@@ -39,4 +36,6 @@ Route::middleware(['auth:sanctum', 'role:user'])->prefix('user')->group(function
     // Route::get('/voucher/{id}', [UserController::class, 'voucherDetail']);
     // Route::post('/voucher/redeem', [UserController::class, 'redeemVoucher']);
     // Route::get('/voucher/redeemed', [UserController::class, 'redeemedVouchers']);
+
+    Route::post('/logout', [AuthController::class, 'logout']);
 });

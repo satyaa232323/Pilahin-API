@@ -94,4 +94,15 @@ class ResponseHelper
     {
         return self::jsonResponse(false, $message, null, 500);
     }
+
+    /**
+     * Return a forbidden response
+     *
+     * @param string $message
+     * @return JsonResponse
+     */
+    public static function forbidden(string $message = 'Forbidden'): JsonResponse
+    {
+        return self::jsonResponse(false, $message, null, 403);
+    }
 }

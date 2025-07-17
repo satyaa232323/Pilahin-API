@@ -22,6 +22,6 @@ class Voucher extends Model
 
     public function redeemedVouchers()
     {
-        return $this->hasMany(Redeemed_vouchers::class, 'voucher_id');
+        return $this->hasMany(related: Redeemed_vouchers::class, foreignKey: 'voucher_id');
     }
 }

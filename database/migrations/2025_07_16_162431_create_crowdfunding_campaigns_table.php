@@ -18,7 +18,6 @@ return new class extends Migration
             $table->integer('target_amount');
             $table->integer('current_amount')->default(0);
             $table->string('photo_url')->nullable();
-            $table->foreignId('location_id')->constrained('drop_points')->onDelete('cascade');
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();
         });

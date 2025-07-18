@@ -22,8 +22,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/qr', [UserController::class, 'getQrText']);
     Route::get('/qr/image', [UserController::class, 'getQrImage']);
 
-     Route::get('vouchers', [UserController::class, 'index']);
-    Route::post('vouchers/redeem', [UserController::class, 'redeem']);
+     Route::get('/vouchers', [UserController::class, 'index']);
+    Route::post('/vouchers/redeem', [UserController::class, 'redeem']);
 
 
 
@@ -32,7 +32,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('crowdfunding')->group(function () {
         Route::get('/campaigns', [CrowdfundingController::class, 'campaigns']);
         Route::get('/campaign/{id}', [CrowdfundingController::class, 'campaignDetail']);
-        Route::post('/{id}/donate', [CrowdfundingController::class, 'donate']);
+        Route::post('/campaign/{id}/donate', [CrowdfundingController::class, 'donate']);
         Route::get('/donations', [CrowdfundingController::class, 'donationHistory']);
         Route::get('/donation/{id}/status', [CrowdfundingController::class, 'checkDonationStatus']);
 
@@ -58,6 +58,7 @@ Route::prefix('crowdfunding')->group(function () {
     Route::get('/payment/error', [CrowdfundingController::class, 'paymentError']);
 });
 
+
 Route::prefix('drop-points')->group(function () {
     Route::get('/', [UserController::class, 'index']); // Get all drop points
 });
@@ -66,5 +67,5 @@ Route::prefix('waste-history')->group(function () {
     Route::get('/{user_id}', [UserController::class, 'getByUser']); // Get history by user
 });
 
-    
+
 

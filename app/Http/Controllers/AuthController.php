@@ -47,7 +47,8 @@ class AuthController extends Controller
                     'qr_code' => $user->qr_code,
                     'qr_image_url' => $user->qr_image_url,
                     'role' => $user->role,
-                    'points' => $user->points
+                    'points' => $user->points,
+                    'income' => $user->income
                 ],
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -81,7 +82,8 @@ class AuthController extends Controller
                         'qr_code' => $user->qr_code,
                         'qr_image_url' => $user->qr_image_url,
                         'role' => $user->role,
-                        'points' => $user->points
+                        'points' => $user->points,
+                        'income' => $user->income
                     ],
                 ]);
             }

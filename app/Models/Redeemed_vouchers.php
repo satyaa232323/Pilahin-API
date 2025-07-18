@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Redeemed_vouchers extends Model
 {
+    protected $table = 'redeemed_vouchers'; // kalau nama tabel plural seperti ini
+
     protected $fillable = [
         'user_id',
         'voucher_id',
@@ -13,6 +15,9 @@ class Redeemed_vouchers extends Model
         'redeemed_at',
         'status',
     ];
+
+        public $timestamps = false; // kalau tabel tidak punya kolom created_at & updated_at
+
 
     protected $casts = [
         'redeemed_at' => 'datetime',

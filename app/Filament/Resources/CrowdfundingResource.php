@@ -27,12 +27,12 @@ class CrowdfundingResource extends Resource
                     ->label('Title')
                     ->required()
                     ->maxLength(100),
-        
+
                 Forms\Components\Textarea::make('description')
                     ->rows(4)
                     ->required(),
 
-                Forms\Components\TextInput::make('goal_amount')
+                Forms\Components\TextInput::make('target_amount')
                     ->label('Target Dana (Rp)')
                     ->required()
                     ->numeric()
@@ -51,24 +51,12 @@ class CrowdfundingResource extends Resource
                     ->required()
                     ->default('active'),
 
-                Forms\Components\FileUpload::make('image_url')
+                Forms\Components\FileUpload::make('photo_url')
                     ->label('Banner / Thumbnail')
                     ->image()
                     ->directory('crowdfunding-images')
+                    ->disk('public') // <== tambahkan ini juga
                     ->nullable(),
-
-                Forms\Components\TextInput::make('target_amount')
-                    ->label('Target Amount')
-                    ->required()
-                    ->numeric()
-                    ->minValue(1),
-
-                Forms\Components\Select::make('location_id')
-                    ->label('Drop Point')
-                    ->relationship('location', 'name') // Pastikan relasi 'location' ada di model
-                    ->required(),
-
-
             ]);
     }
 

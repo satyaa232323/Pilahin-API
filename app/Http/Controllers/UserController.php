@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helper\ResponseHelper;
 use App\Http\Requests\UserRequest;
 use App\Models\User;
+use App\Models\Voucher;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
@@ -158,6 +159,42 @@ public function redeemVoucher(Request $request)
         ]
     ]);
 }
+
+public function getByUser($id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        return response()->json($user);
+    }
+
+    public function redeem(Request $request)
+{
+    $user = User::find($request->user_id);
+    $voucher = Voucher::find($request->voucher_id);
+
+    if (!$user || !$voucher) {
+        return response()->json(['message' => 'User or voucher not found'], 404);
+    }
+
+    if ($user->points < $voucher->required_points) {
+        return response()->json(['message' => 'Not enough points'], 400);
+    }
+
+    // kurangi poin user
+    $user->points -= $voucher->required_points;
+    $user->save();
+
+    // logika tambahan: simpan ke tabel `redeem_vouchers`, dll
+
+    return response()->json(['message' => 'Voucher redeemed successfully']);
+}
+
+
+
 
 
 

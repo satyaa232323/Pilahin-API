@@ -51,10 +51,11 @@ class CrowdfundingResource extends Resource
                     ->required()
                     ->default('active'),
 
-                Forms\Components\FileUpload::make('image_url')
+                Forms\Components\FileUpload::make('photo_url')
                     ->label('Banner / Thumbnail')
                     ->image()
                     ->directory('crowdfunding-images')
+                    ->disk('public') // <== tambahkan ini juga
                     ->nullable(),
 
                 Forms\Components\TextInput::make('target_amount')

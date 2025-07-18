@@ -6,6 +6,9 @@ use App\Helper\ResponseHelper;
 use App\Http\Requests\UserRequest;
 use App\Models\User;
 use App\Models\Voucher;
+use App\Models\Waste_deposit;
+use Illuminate\Support\Facades\Auth;
+
 use Illuminate\Http\Request;
 
 class UserController extends Controller
@@ -116,17 +119,18 @@ class UserController extends Controller
 
     // Waste History
 
-     public function wasteHistory()
-    {
-        return response()->json([
-            'success' => true,
-            'message' => 'Waste history retrieved successfully',
-            'data' => [
-                // data dummy sementara
-                ['id' => 1, 'type' => 'Plastik', 'weight' => 2.5],
-                ['id' => 2, 'type' => 'Kertas', 'weight' => 1.2]
-            ]
-        ]);
+    public function wasteHistory()
+{
+    $user = Auth::user(); // ambil user dari token
+
+    // Ambil semua data waste_deposits milik user ini
+    $wasteDeposits = Waste_deposit::where('user_id', $user->id)->get();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Waste history retrieved successfully',
+        'data' => $wasteDeposits
+    ]);
     }
 
     // Waste Detail
@@ -149,51 +153,25 @@ class UserController extends Controller
 
 public function redeemVoucher(Request $request)
 {
-    return response()->json([
-        'success' => true,
-        'message' => 'Voucher berhasil diredeem!',
-        'data' => [
-            'voucher_code' => $request->voucher_code ?? 'ABC123',
-            'status' => 'success',
-            'redeemed_at' => now()
-        ]
-    ]);
-}
-
-public function getByUser($id)
-    {
-        $user = User::find($id);
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        return response()->json($user);
-    }
-
-    public function redeem(Request $request)
-{
-    $user = User::find($request->user_id);
+    $user = Auth::user(); // ✅ Ambil user dari token
     $voucher = Voucher::find($request->voucher_id);
 
-    if (!$user || !$voucher) {
-        return response()->json(['message' => 'User or voucher not found'], 404);
+    if (!$voucher) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Voucher tidak ditemukan',
+        ], 200);
     }
 
     if ($user->points < $voucher->required_points) {
-        return response()->json(['message' => 'Not enough points'], 400);
+        return response()->json([
+            'success' => false,
+            'message' => 'Poin tidak mencukupi untuk redeem voucher ini',
+        ], 400);
     }
-
-    // kurangi poin user
-    $user->points -= $voucher->required_points;
-    $user->save();
-
-    // logika tambahan: simpan ke tabel `redeem_vouchers`, dll
-
-    return response()->json(['message' => 'Voucher redeemed successfully']);
 }
 
-
+    // Kurangi poin user
 
 
 

@@ -28,7 +28,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('crowdfunding')->group(function () {
         Route::get('/campaigns', [CrowdfundingController::class, 'campaigns']);
         Route::get('/campaign/{id}', [CrowdfundingController::class, 'campaignDetail']);
-        Route::post('/donate', [CrowdfundingController::class, 'donate']);
+        Route::post('/{id}/donate', [CrowdfundingController::class, 'donate']);
         Route::get('/donations', [CrowdfundingController::class, 'donationHistory']);
         Route::get('/donation/{id}/status', [CrowdfundingController::class, 'checkDonationStatus']);
 

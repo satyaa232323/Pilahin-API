@@ -23,7 +23,6 @@ class DonateRequest extends FormRequest
     {
         return [
     
-            'campaign_id' => 'required|exists:crowdfunding_campaigns,id',
             'amount' => 'required|numeric|min:1',
         ];
     }
@@ -34,8 +33,7 @@ class DonateRequest extends FormRequest
             'amount.required' => 'Jumlah donasi wajib diisi.',
             'amount.numeric' => 'Jumlah donasi harus berupa angka.',
             'amount.min' => 'Jumlah donasi minimal Rp1.',
-            'campaign_id.required' => 'Campaign ID wajib diisi.',
-            'campaign_id.exists' => 'Campaign tidak ditemukan.',
+            
         ];
     }
 }

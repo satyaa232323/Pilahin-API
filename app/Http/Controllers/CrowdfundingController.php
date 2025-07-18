@@ -53,7 +53,7 @@ class CrowdfundingController extends Controller
         }
     }
 
-    public function donate(DonateRequest $request)
+    public function donate(DonateRequest $request, $id)
     {
         $validated = $request->validated();
         $user = $request->user();
@@ -62,7 +62,13 @@ class CrowdfundingController extends Controller
             return ResponseHelper::notFound('User not found');
         }
 
-        $campaign = Crowdfunding_campaign::findOrFail($validated['campaign_id']);
+        $campaign = Crowdfunding_campaign::where('id', $id)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$campaign) {
+            return ResponseHelper::notFound('Campaign not found or inactive');
+        }
 
         // Create donation record first
         $donation = Donation::create([

@@ -59,6 +59,17 @@ class DropPointResource extends Resource
                     ->relationship('admin', 'name')
                     ->required(),
 
+                Forms\Components\FileUpload::make('photo_url')
+                     ->label('Photo')
+                     ->image()
+                     ->directory('drop-point-photos')
+                     ->visibility('public')
+                     ->nullable()
+                     ->columnSpan('full'),
+
+
+                    
+
             ]);
     }
 

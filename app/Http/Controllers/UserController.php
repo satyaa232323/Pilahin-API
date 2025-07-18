@@ -7,8 +7,8 @@ use App\Http\Requests\UserRequest;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Models\Waste_deposit;
+use App\Models\Redeemed_vouchers;
 use Illuminate\Support\Facades\Auth;
-
 use Illuminate\Http\Request;
 
 class UserController extends Controller
@@ -169,6 +169,39 @@ public function redeemVoucher(Request $request)
             'message' => 'Poin tidak mencukupi untuk redeem voucher ini',
         ], 400);
     }
+    
+}
+  public function redeem(Request $request)
+{
+    // Get authenticated user
+    $user = Auth::user();
+    
+    // Find voucher from request
+    $voucher = Voucher::find($request->voucher_id);
+
+    if (!$user || !$voucher) {
+        return response()->json(['message' => 'User or voucher not found'], 404);
+    }
+
+    if ($user->points < $voucher->required_points) {
+        return response()->json(['message' => 'Not enough points'], 400);
+    }
+
+    // Deduct points
+    $user->points -= $voucher->required_points;
+    $user->save;
+
+    // Save to redeemed_vouchers table
+    $redeemedVoucher = Redeemed_vouchers::create([
+        'user_id' => $user->id,
+        'voucher_id' => $voucher->id,
+        'redeemed_at' => now()
+    ]);
+
+    return response()->json([
+        'message' => 'Voucher redeemed successfully',
+        'data' => $redeemedVoucher
+    ]);
 }
 
     // Kurangi poin user

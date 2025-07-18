@@ -61,10 +61,10 @@ class UserController extends Controller
             $user->refresh();
 
 
-            return ResponseHelper::success('Profile updated successfully', [
+              return ResponseHelper::success('Profile updated successfully', [
                 'user' => $user,
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        }  catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return ResponseHelper::notFound('User not found');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseHelper::validationError('Validation failed', $e->errors());
@@ -79,43 +79,12 @@ class UserController extends Controller
     public function GetQrText(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'qr_code' => 'required|string'
+            $user = $request->user();
+            return ResponseHelper::success('QR text retrieved successfully', [
+                'qr_text' => $user->qr_code,
             ]);
-
-            // Check if authenticated user is admin
-            $admin = $request->user();
-            if ($admin->role !== 'admin' && $admin->role !== 'superadmin') {
-                return ResponseHelper::forbidden('Only admin can scan QR codes');
-            }
-
-            // Find user by QR code
-            $user = User::where('qr_code', $validated['qr_code'])->first();
-
-            if (!$user) {
-                return ResponseHelper::notFound('User not found with this QR code');
-            }
-
-            // Get user profile with additional information
-            $userProfile = [
-                'id' => $user->id,
-                'name' => $user->name,
-                'username' => $user->username,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'points' => $user->points,
-                'role' => $user->role,
-                'qr_code' => $user->qr_code,
-                'created_at' => $user->created_at,
-                'last_scan_by' => $admin->name,
-                'scan_time' => now()
-            ];
-
-            return ResponseHelper::success('User profile retrieved successfully', $userProfile);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return ResponseHelper::validationError('Validation failed', $e->errors());
         } catch (\Exception $e) {
-            return ResponseHelper::serverError('Failed to retrieve user profile: ' . $e->getMessage());
+            return ResponseHelper::serverError('Failed to retrieve QR text: ' . $e->getMessage());
         }
     }
 
@@ -143,6 +112,54 @@ class UserController extends Controller
             return ResponseHelper::serverError('Failed to retrieve QR image: ' . $e->getMessage());
         }
     }
+
+    // Waste History
+
+     public function wasteHistory()
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Waste history retrieved successfully',
+            'data' => [
+                // data dummy sementara
+                ['id' => 1, 'type' => 'Plastik', 'weight' => 2.5],
+                ['id' => 2, 'type' => 'Kertas', 'weight' => 1.2]
+            ]
+        ]);
+    }
+
+    // Waste Detail
+
+    public function wasteDetail($id)
+{
+    return response()->json([
+        'success' => true,
+        'message' => 'Detail sampah ditemukan',
+        'data' => [
+            'id' => $id,
+            'type' => 'Plastik',
+            'weight' => 1.5,
+            'collected_at' => '2025-07-17'
+        ]
+    ]);
+}
+
+// Redeem Voucher
+
+public function redeemVoucher(Request $request)
+{
+    return response()->json([
+        'success' => true,
+        'message' => 'Voucher berhasil diredeem!',
+        'data' => [
+            'voucher_code' => $request->voucher_code ?? 'ABC123',
+            'status' => 'success',
+            'redeemed_at' => now()
+        ]
+    ]);
+}
+
+
 
 
     /**

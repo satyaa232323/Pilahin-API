@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Helper\ResponseHelper;
+use App\Http\Requests\DonateRequest;
 use App\Models\Crowdfunding_campaign;
 use App\Models\Donation;
 use Illuminate\Http\Request;
 use Midtrans\Config;
 use Midtrans\Snap;
+use Midtrans\Notification;
 
 class CrowdfundingController extends Controller
 {
@@ -51,58 +53,86 @@ class CrowdfundingController extends Controller
         }
     }
 
-    public function donate(Request $request)
+    public function donate(DonateRequest $request)
     {
+        $validated = $request->validated();
+        $user = $request->user();
+
+        if (!$user) {
+            return ResponseHelper::notFound('User not found');
+        }
+
+        $campaign = Crowdfunding_campaign::findOrFail($validated['campaign_id']);
+
+        // Create donation record first
+        $donation = Donation::create([
+            'user_id' => $user->id,
+            'campaign_id' => $campaign->id,
+            'amount' => $validated['amount'],
+            'payment_status' => 'pending',
+        ]);
+
+        $orderId = 'DONATION-' . $donation->id . '-' . time();
+
+        $params = [
+            'transaction_details' => [
+                'order_id' => $orderId,
+                'gross_amount' => $validated['amount'],
+            ],
+            'customer_details' => [
+                'first_name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+            ],
+            'item_details' => [
+                [
+                    'id' => 'donation-' . $campaign->id,
+                    'price' => $validated['amount'],
+                    'quantity' => 1,
+                    'name' => 'Donasi untuk ' . $campaign->title,
+                ],
+            ],
+            // Tambahkan redirect URLs
+            'callbacks' => [
+                'finish' => url('  https://0a32e6553e3a.ngrok-free.app/api/crowdfunding/payment/finish?donation_id=' . $donation->id),
+                'unfinish' => url('  https://0a32e6553e3a.ngrok-free.app/api/crowdfunding/payment/unfinish?donation_id=' . $donation->id),
+                'error' => url('  https://0a32e6553e3a.ngrok-free.app/api/crowdfunding/payment/error?donation_id=' . $donation->id),
+            ],
+            'expiry' => [
+                'start_time' => now()->format('Y-m-d H:i:s O'),
+                'unit' => 'minutes',
+                'duration' => 30
+            ],
+        ];
+
         try {
-            $validated = $request->validate([
-                'campaign_id' => 'required|exists:crowdfunding_campaigns,id',
-                'amount' => 'required|integer|min:10000'
-            ]);
-
-            $user = $request->user();
-            $campaign = Crowdfunding_campaign::find($validated['campaign_id']);
-
-            // Create donation record
-            $donation = Donation::create([
-                'user_id' => $user->id,
-                'campaign_id' => $campaign->id,
-                'amount' => $validated['amount'],
-                'payment_status' => 'pending'
-            ]);
-
-            // Prepare Midtrans transaction
-            $params = [
-                'transaction_details' => [
-                    'order_id' => 'DONATION-' . $donation->id . '-' . time(),
-                    'gross_amount' => $validated['amount'],
-                ],
-                'customer_details' => [
-                    'first_name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                ],
-                'item_details' => [
-                    [
-                        'id' => 'donation-' . $campaign->id,
-                        'price' => $validated['amount'],
-                        'quantity' => 1,
-                        'name' => 'Donasi untuk ' . $campaign->title,
-                    ],
-                ],
-            ];
-
             $snapToken = Snap::getSnapToken($params);
 
-            // Update donation with payment_id
-            $donation->update(['payment_id' => $params['transaction_details']['order_id']]);
+            $donation->update([
+                'payment_id' => $orderId
+            ]);
 
             return ResponseHelper::success('Payment token generated successfully', [
                 'snap_token' => $snapToken,
                 'donation_id' => $donation->id,
-                'order_id' => $params['transaction_details']['order_id']
+                'order_id' => $orderId,
+                'payment_url' => 'https://app.sandbox.midtrans.com/snap/v2/vtweb/' . $snapToken,
+                'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v2/vtweb/' . $snapToken,
+                'campaign' => [
+                    'id' => $campaign->id,
+                    'title' => $campaign->title,
+                    'current_amount' => $campaign->current_amount,
+                    'target_amount' => $campaign->target_amount,
+                    'progress_percentage' => round(($campaign->current_amount / $campaign->target_amount) * 100, 2),
+                ],
+                'amount' => $validated['amount'],
+                'expires_at' => now()->addMinutes(30)->toISOString(),
             ]);
         } catch (\Exception $e) {
-            return ResponseHelper::serverError('Failed to create donation: ' . $e->getMessage());
+            if (isset($donation)) {
+                $donation->delete();
+            }
+            return ResponseHelper::serverError('Midtrans Error: ' . $e->getMessage());
         }
     }
 
@@ -111,9 +141,10 @@ class CrowdfundingController extends Controller
         try {
             $donations = Donation::where('user_id', $request->user()->id)
                 ->with(['campaign'])
-                ->orderBy('created_at', 'desc');
-            
-            if(!$donations->exists()) {
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            if ($donations->isEmpty()) {
                 return ResponseHelper::notFound('No donation history found');
             }
 
@@ -123,33 +154,133 @@ class CrowdfundingController extends Controller
         }
     }
 
+    // Payment redirect handlers
+    public function paymentFinish(Request $request)
+    {
+        $donationId = $request->get('donation_id');
+
+        if ($donationId) {
+            $donation = Donation::with('campaign')->find($donationId);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment completed successfully',
+                'data' => [
+                    'donation_id' => $donation->id,
+                    'payment_status' => $donation->payment_status,
+                    'amount' => $donation->amount,
+                    'campaign' => $donation->campaign->title ?? null,
+                ],
+                'redirect' => 'mobile://payment/success'
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment completed',
+            'redirect' => 'mobile://payment/success'
+        ]);
+    }
+
+    public function paymentUnfinish(Request $request)
+    {
+        $donationId = $request->get('donation_id');
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Payment not completed',
+            'data' => [
+                'donation_id' => $donationId,
+                'status' => 'pending'
+            ],
+            'redirect' => 'mobile://payment/pending'
+        ]);
+    }
+
+    public function paymentError(Request $request)
+    {
+        $donationId = $request->get('donation_id');
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Payment failed',
+            'data' => [
+                'donation_id' => $donationId,
+                'status' => 'failed'
+            ],
+            'redirect' => 'mobile://payment/error'
+        ]);
+    }
+
     // Webhook untuk update status payment dari Midtrans
     public function handleWebhook(Request $request)
     {
         try {
-            $notification = $request->all();
-            $orderId = $notification['order_id'];
-            $transactionStatus = $notification['transaction_status'];
+            $notification = new Notification();
+
+            $orderId = $notification->order_id;
+            $transactionStatus = $notification->transaction_status;
+            $fraudStatus = $notification->fraud_status ?? null;
 
             $donation = Donation::where('payment_id', $orderId)->first();
 
             if ($donation) {
-                if ($transactionStatus == 'settlement' || $transactionStatus == 'capture') {
-                    $donation->update(['payment_status' => 'paid']);
+                $paymentStatus = $this->mapMidtransStatus($transactionStatus, $fraudStatus);
+                $donation->update(['payment_status' => $paymentStatus]);
 
-                    // Update campaign current amount
+                // Update campaign current amount if payment is successful
+                if ($paymentStatus === 'paid') {
                     $campaign = $donation->campaign;
                     $campaign->increment('current_amount', $donation->amount);
-                } elseif ($transactionStatus == 'pending') {
-                    $donation->update(['payment_status' => 'pending']);
-                } else {
-                    $donation->update(['payment_status' => 'failed']);
                 }
             }
 
             return response()->json(['status' => 'success']);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Map Midtrans transaction status to our payment status
+     */
+    private function mapMidtransStatus($transactionStatus, $fraudStatus)
+    {
+        switch ($transactionStatus) {
+            case 'capture':
+                return ($fraudStatus === 'accept') ? 'paid' : 'failed';
+            case 'settlement':
+                return 'paid';
+            case 'pending':
+                return 'pending';
+            case 'deny':
+            case 'expire':
+            case 'cancel':
+                return 'failed';
+            default:
+                return 'pending';
+        }
+    }
+
+    // Method untuk cek status donation
+    public function checkDonationStatus($donationId)
+    {
+        try {
+            $donation = Donation::with('campaign')->findOrFail($donationId);
+
+            return ResponseHelper::success('Donation status retrieved successfully', [
+                'donation_id' => $donation->id,
+                'payment_status' => $donation->payment_status,
+                'amount' => $donation->amount,
+                'campaign' => [
+                    'id' => $donation->campaign->id,
+                    'title' => $donation->campaign->title,
+                ],
+                'created_at' => $donation->created_at,
+                'updated_at' => $donation->updated_at,
+            ]);
+        } catch (\Exception $e) {
+            return ResponseHelper::notFound('Donation not found');
         }
     }
 }

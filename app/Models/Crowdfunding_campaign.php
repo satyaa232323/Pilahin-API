@@ -16,6 +16,10 @@ class Crowdfunding_campaign extends Model
         'status',
     ];
 
+    protected $casts = [
+        'end_date' => 'datetime',
+    ];
+
     // Relationships
     public function dropPoint()
     {
@@ -28,8 +32,7 @@ class Crowdfunding_campaign extends Model
     }
 
     public function location()
-{
-    return $this->belongsTo(Drop_point::class, 'location_id');
-}
-
+    {
+        return $this->belongsTo(Drop_point::class, 'location_id');
+    }
 }

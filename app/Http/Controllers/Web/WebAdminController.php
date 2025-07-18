@@ -7,6 +7,7 @@ use App\Models\Waste_deposit;
 use App\Models\WasteDeposit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class WebAdminController
 {
@@ -53,12 +54,32 @@ class WebAdminController
                 'qr_code' => 'required|string'
             ]);
 
+            // Check if user is authenticated and is admin/superadmin
+            $admin = Auth::user();
+            if (!$admin || ($admin->role !== 'admin' && $admin->role !== 'superadmin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only admin and superadmin can scan QR codes'
+                ], 403);
+            }
+
+            // Log the QR code being searched
+            Log::info('Scanning QR Code: ' . $validated['qr_code']);
+
             $user = User::where('qr_code', $validated['qr_code'])->first();
 
             if (!$user) {
+                // Log all existing QR codes for debugging
+                $allQrCodes = User::whereNotNull('qr_code')->pluck('qr_code')->toArray();
+                Log::info('Available QR Codes: ' . implode(', ', $allQrCodes));
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'User not found'
+                    'message' => 'User not found with QR code: ' . $validated['qr_code'],
+                    'debug' => [
+                        'searched_qr' => $validated['qr_code'],
+                        'available_qr_codes' => $allQrCodes
+                    ]
                 ], 404);
             }
 
@@ -71,10 +92,13 @@ class WebAdminController
                     'email' => $user->email,
                     'phone' => $user->phone,
                     'points' => $user->points,
-                    'qr_code' => $user->qr_code
+                    'qr_code' => $user->qr_code,
+                    'last_scan_by' => $admin->name,
+                    'scan_time' => now()
                 ]
             ]);
         } catch (\Exception $e) {
+            Log::error('QR Scan Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()

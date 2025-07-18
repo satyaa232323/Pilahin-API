@@ -6,7 +6,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use App\Helper\QrCodeHelper;
 
 class AdminSeeder extends Seeder
 {
@@ -15,34 +15,41 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        // Generate QR codes and save as files
-        $adminQrCode = QrCode::format('png')->size(200)->generate('admin123');
-        $superadminQrCode = QrCode::format('png')->size(200)->generate('superadmin123');
+        // Create storage directory if it doesn't exist
+        if (!Storage::disk('public')->exists('qr_codes')) {
+            Storage::disk('public')->makeDirectory('qr_codes');
+        }
 
-        // Save QR codes to storage
-        Storage::disk('public')->put('qr_codes/admin.png', $adminQrCode);
-        Storage::disk('public')->put('qr_codes/superadmin.png', $superadminQrCode);
+        // Generate QR codes using QrCodeHelper
+        $adminQrUrl = QrCodeHelper::generateAndSave('admin123', 'admin', 'png');
+        $superadminQrUrl = QrCodeHelper::generateAndSave('superadmin123', 'superadmin', 'png');
 
         $admin = [
             [
                 'name' => 'Admin tamvan',
                 'email' => 'admin@gmail.com',
                 'phone' => '0123456789',
-                'password' => bcrypt(value: 'admin123'),
-                'qr_code' => 'admin123', // Store the original data instead of image
-                'qr_image_url' => 'storage/qr_codes/admin.png',
+                'password' => bcrypt('admin123'),
+                'qr_code' => 'admin123',
+                'qr_image_url' => $adminQrUrl,
                 'role' => 'admin',
                 'points' => 0,
+                'email_verified_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
                 'name' => 'Superadmin tamvan',
                 'email' => 'superadmin@gmail.com',
                 'phone' => '0123456789',
                 'password' => bcrypt('superadmin123'),
-                'qr_code' => 'superadmin123', // Store the original data instead of image
-                'qr_image_url' => 'storage/qr_codes/superadmin.png',
+                'qr_code' => 'superadmin123',
+                'qr_image_url' => $superadminQrUrl,
                 'role' => 'superadmin',
                 'points' => 0,
+                'email_verified_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
         ];
 

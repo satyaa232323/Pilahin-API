@@ -1,5 +1,48 @@
 @extends('layout')
 
+@push('styles')
+    <style>
+        #qr-reader {
+            width: 100% !important;
+            border: 2px solid #e3e6f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #qr-reader video {
+            width: 100% !important;
+            height: auto !important;
+            max-height: 400px;
+            object-fit: cover;
+        }
+
+        #qr-reader canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        @media (max-width: 768px) {
+            #qr-reader {
+                max-height: 300px;
+            }
+
+            #qr-reader video {
+                max-height: 250px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #qr-reader {
+                max-height: 250px;
+            }
+
+            #qr-reader video {
+                max-height: 200px;
+            }
+        }
+    </style>
+@endpush
+
 @section('content')
     <!-- Page Heading -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
@@ -42,6 +85,10 @@
                                 <label for="qr_code">QR Code</label>
                                 <input type="text" class="form-control" id="qr_code" name="qr_code"
                                     placeholder="Masukkan QR Code atau hasil scan" required>
+                                <small class="form-text text-muted">
+                                    Test QR Code: <button type="button" class="btn btn-sm btn-outline-primary"
+                                        onclick="document.getElementById('qr_code').value='TEST123456'">TEST123456</button>
+                                </small>
                             </div>
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-search"></i> Cari User
@@ -168,6 +215,7 @@
     </div>
 @endsection
 
+
 @push('scripts')
     <!-- HTML5 QR Code Scanner -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -204,20 +252,119 @@
                 submitBtn.disabled = !(hasUser && hasWeight && hasCategory && hasLocation && hasPoints);
             }
 
-            // Event listeners
-            weightInput.addEventListener('input', calculatePoints);
-            document.getElementById('category').addEventListener('change', checkFormValidity);
-            document.getElementById('location_id').addEventListener('change', checkFormValidity);
-
             // QR Scanner functions
             function onScanSuccess(decodedText, decodedResult) {
+                console.log('QR Code berhasil discan:', decodedText);
+
+                // Set QR code ke input
                 qrCodeInput.value = decodedText;
-                document.getElementById('scan-user-form').dispatchEvent(new Event('submit'));
+
+                // Stop scanner setelah berhasil scan
                 stopScanner();
+
+                // Langsung proses scan user
+                processQrScan(decodedText);
             }
 
             function onScanFailure(error) {
-                // Handle scan failure silently
+                // Handle scan failure silently - jangan console.log setiap error
+                // karena akan spam console
+            }
+
+            function processQrScan(qrCode) {
+                if (!qrCode.trim()) {
+                    console.log('QR Code kosong');
+                    alert('QR Code tidak boleh kosong');
+                    return;
+                }
+
+                console.log('Memproses QR Code:', qrCode);
+
+                // Show loading indicator
+                document.getElementById('user-info').style.display = 'none';
+                const loadingHtml = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-spinner fa-spin"></i> Mencari user...
+                    </div>
+                `;
+                document.getElementById('user-info').innerHTML = loadingHtml;
+                document.getElementById('user-info').style.display = 'block';
+
+                // Call API to scan QR
+                fetch('/api/scan-qr', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute(
+                                'content'),
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            qr_code: qrCode.trim()
+                        })
+                    })
+                    .then(async response => {
+                        console.log('Response status:', response.status);
+                        console.log('Response headers:', response.headers);
+
+                        const text = await response.text();
+                        console.log('Raw response:', text);
+
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error('JSON parse error:', e);
+                            throw new Error('Invalid JSON response: ' + text);
+                        }
+                    })
+                    .then(data => {
+                        console.log('Response data:', data);
+
+                        if (data.success) {
+                            const user = data.data;
+                            selectedUserIdInput.value = user.id;
+
+                            document.getElementById('user-info').innerHTML = `
+                                <div class="alert alert-success">
+                                    <h6><i class="fas fa-user"></i> User Ditemukan:</h6>
+                                    <div id="user-details">
+                                        <strong>ID:</strong> ${user.id}<br>
+                                        <strong>Nama:</strong> ${user.name}<br>
+                                        <strong>Email:</strong> ${user.email}<br>
+                                        <strong>Phone:</strong> ${user.phone || '-'}<br>
+                                        <strong>Total Poin:</strong> ${user.points}<br>
+                                        <strong>QR Code:</strong> ${user.qr_code}
+                                    </div>
+                                </div>
+                            `;
+                            document.getElementById('user-info').style.display = 'block';
+                            checkFormValidity();
+                        } else {
+                            const errorMsg = data.message || 'User tidak ditemukan';
+                            console.error('API Error:', errorMsg);
+
+                            document.getElementById('user-info').innerHTML = `
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> ${errorMsg}
+                                </div>
+                            `;
+                            document.getElementById('user-info').style.display = 'block';
+                            selectedUserIdInput.value = '';
+                            checkFormValidity();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch Error:', error);
+
+                        document.getElementById('user-info').innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle"></i> Error: ${error.message}
+                            </div>
+                        `;
+                        document.getElementById('user-info').style.display = 'block';
+                        selectedUserIdInput.value = '';
+                        checkFormValidity();
+                    });
             }
 
             function startScanner() {
@@ -226,32 +373,106 @@
                 document.getElementById('start-scanner').style.display = 'none';
                 document.getElementById('stop-scanner').style.display = 'inline-block';
 
+                // Inisialisasi scanner
                 html5QrcodeScanner = new Html5Qrcode("qr-reader");
+
+                // Konfigurasi scanner dengan responsive sizing
+                const qrReaderElement = document.getElementById('qr-reader');
+                const parentWidth = qrReaderElement.parentElement.offsetWidth;
+                const scannerWidth = Math.min(parentWidth - 40, 400); // Max 400px, min parent width - padding
+                const scannerHeight = Math.min(scannerWidth * 0.75, 300); // Aspect ratio 4:3, max 300px
+
+                const config = {
+                    fps: 10,
+                    qrbox: {
+                        width: Math.min(scannerWidth * 0.7, 250),
+                        height: Math.min(scannerHeight * 0.7, 250)
+                    },
+                    aspectRatio: 1.0,
+                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                };
+
+                console.log('Starting scanner with config:', config);
+
+                // Mulai scanner dengan prioritas kamera belakang
+                Html5Qrcode.getCameras().then(devices => {
+                    console.log('Available cameras:', devices);
+
+                    if (devices && devices.length > 0) {
+                        // Cari kamera belakang dulu
+                        let selectedCamera = devices.find(device =>
+                            device.label.toLowerCase().includes('back') ||
+                            device.label.toLowerCase().includes('rear') ||
+                            device.label.toLowerCase().includes('environment')
+                        );
+
+                        // Jika tidak ada kamera belakang, gunakan kamera pertama
+                        if (!selectedCamera) {
+                            selectedCamera = devices[0];
+                        }
+
+                        console.log('Selected camera:', selectedCamera);
+
+                        // Start scanner dengan kamera yang dipilih
+                        html5QrcodeScanner.start(
+                            selectedCamera.id,
+                            config,
+                            onScanSuccess,
+                            onScanFailure
+                        ).catch(err => {
+                            console.error("Error starting scanner with specific camera:", err);
+                            // Fallback ke kamera default
+                            startScannerFallback(config);
+                        });
+                    } else {
+                        // Tidak ada kamera yang terdeteksi
+                        alert("Tidak ada kamera yang terdeteksi pada perangkat ini.");
+                        stopScanner();
+                    }
+                }).catch(err => {
+                    console.error("Error getting cameras:", err);
+                    // Fallback ke kamera default
+                    startScannerFallback(config);
+                });
+            }
+
+            function startScannerFallback(config) {
+                // Fallback menggunakan facingMode
                 html5QrcodeScanner.start({
                         facingMode: "environment"
-                    }, {
-                        fps: 10,
-                        qrbox: {
-                            width: 250,
-                            height: 250
-                        }
-                    },
+                    }, // Kamera belakang
+                    config,
                     onScanSuccess,
                     onScanFailure
                 ).catch(err => {
-                    console.log("Error starting scanner:", err);
-                    alert("Error starting camera. Please check permissions.");
-                    stopScanner();
+                    console.error("Error starting scanner with environment camera:", err);
+
+                    // Last fallback - kamera depan
+                    html5QrcodeScanner.start({
+                            facingMode: "user"
+                        },
+                        config,
+                        onScanSuccess,
+                        onScanFailure
+                    ).catch(err => {
+                        console.error("Error starting scanner with user camera:", err);
+                        alert(
+                            "Error starting camera. Please check camera permissions and try again."
+                        );
+                        stopScanner();
+                    });
                 });
             }
 
             function stopScanner() {
                 if (html5QrcodeScanner) {
                     html5QrcodeScanner.stop().then(() => {
+                        console.log('Scanner stopped successfully');
                         html5QrcodeScanner.clear();
                         html5QrcodeScanner = null;
                     }).catch(err => {
-                        console.log("Error stopping scanner:", err);
+                        console.error("Error stopping scanner:", err);
+                        html5QrcodeScanner = null;
                     });
                 }
 
@@ -261,71 +482,54 @@
                 document.getElementById('stop-scanner').style.display = 'none';
             }
 
+            // Event listeners
+            weightInput.addEventListener('input', calculatePoints);
+            document.getElementById('category').addEventListener('change', checkFormValidity);
+            document.getElementById('location_id').addEventListener('change', checkFormValidity);
+
             // Scanner button events
             document.getElementById('start-scanner').addEventListener('click', startScanner);
             document.getElementById('stop-scanner').addEventListener('click', stopScanner);
 
-            // Handle scan user form
+            // Handle manual scan user form
             document.getElementById('scan-user-form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const qrCode = qrCodeInput.value.trim();
 
                 if (qrCode) {
-                    // Call API to scan QR
-                    fetch('/api/scan-qr', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
-                                    ?.getAttribute('content') || document.querySelector(
-                                        'input[name="_token"]').value
-                            },
-                            body: JSON.stringify({
-                                qr_code: qrCode
-                            })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                const user = data.data;
-                                selectedUserIdInput.value = user.id;
-                                document.getElementById('user-details').innerHTML = `
-                                <strong>ID:</strong> ${user.id}<br>
-                                <strong>Nama:</strong> ${user.name}<br>
-                                <strong>Email:</strong> ${user.email}<br>
-                                <strong>Phone:</strong> ${user.phone || '-'}<br>
-                                <strong>Total Poin:</strong> ${user.points}
-                            `;
-                                document.getElementById('user-info').style.display = 'block';
-                                checkFormValidity();
-                            } else {
-                                alert('User tidak ditemukan: ' + data.message);
-                                document.getElementById('user-info').style.display = 'none';
-                                selectedUserIdInput.value = '';
-                                checkFormValidity();
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            alert('Error scanning QR code');
-                        });
+                    processQrScan(qrCode);
+                } else {
+                    alert('Masukkan QR Code terlebih dahulu');
                 }
             });
 
             // Handle file input label update
-            document.getElementById('photo_url').addEventListener('change', function(e) {
-                const fileName = e.target.files[0]?.name || 'Pilih foto sampah...';
-                document.querySelector('.custom-file-label').textContent = fileName;
-            });
+            const photoInput = document.getElementById('photo_url');
+            if (photoInput) {
+                photoInput.addEventListener('change', function(e) {
+                    const fileName = e.target.files[0]?.name || 'Pilih foto sampah...';
+                    const label = document.querySelector('.custom-file-label');
+                    if (label) {
+                        label.textContent = fileName;
+                    }
+                });
+            }
 
             // Handle form reset
-            document.querySelector('button[type="reset"]').addEventListener('click', function() {
-                selectedUserIdInput.value = '';
-                document.getElementById('user-info').style.display = 'none';
-                document.querySelector('.custom-file-label').textContent = 'Pilih foto sampah...';
-                pointsInput.value = '';
-                checkFormValidity();
-            });
+            const resetBtn = document.querySelector('button[type="reset"]');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function() {
+                    selectedUserIdInput.value = '';
+                    document.getElementById('user-info').style.display = 'none';
+                    const label = document.querySelector('.custom-file-label');
+                    if (label) {
+                        label.textContent = 'Pilih foto sampah...';
+                    }
+                    pointsInput.value = '';
+                    qrCodeInput.value = '';
+                    checkFormValidity();
+                });
+            }
 
             // Handle waste deposit form submission
             document.getElementById('waste-deposit-form').addEventListener('submit', function(e) {
@@ -356,9 +560,12 @@
                             this.reset();
                             selectedUserIdInput.value = '';
                             document.getElementById('user-info').style.display = 'none';
-                            document.querySelector('.custom-file-label').textContent =
-                                'Pilih foto sampah...';
+                            const label = document.querySelector('.custom-file-label');
+                            if (label) {
+                                label.textContent = 'Pilih foto sampah...';
+                            }
                             pointsInput.value = '';
+                            qrCodeInput.value = '';
                         } else {
                             alert('Error: ' + data.message);
                         }
@@ -372,6 +579,18 @@
                         checkFormValidity();
                     });
             });
+
+            // Handle window resize untuk responsive scanner
+            window.addEventListener('resize', function() {
+                if (html5QrcodeScanner && document.getElementById('qr-reader').style.display !== 'none') {
+                    // Restart scanner dengan ukuran baru jika sedang aktif
+                    stopScanner();
+                    setTimeout(startScanner, 500);
+                }
+            });
+
+            // Initial check
+            checkFormValidity();
         });
     </script>
 @endpush

@@ -3,18 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Helper\ResponseHelper;
+use App\Helper\QrCodeHelper;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\Storage;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\RoundBlockSizeMode;
+use Endroid\QrCode\Color\Color;
 
 class AuthController extends Controller
 {
     /**
      * Display a listing of the resource.
-     */    public function register(Request $request)
+     */
+    public function register(Request $request)
     {
         try {
             $validated = $request->validate([
@@ -27,12 +34,11 @@ class AuthController extends Controller
             $validated['password'] = bcrypt($validated['password']);
             $validated['qr_code'] = strtoupper(Str::random(10));
 
-            // Generate QR code image using png format (doesn't require imagick)
-            $qrImage = QrCode::format(format: 'png')->size(300)->generate($validated['qr_code']);
-            $path = 'qr_codes/' . $validated['qr_code'] . '.png';
-            Storage::disk('public')->put(path: $path, contents: $qrImage);
-
-            $validated['qr_image_url'] = Storage::url($path);
+            // Generate and save QR code using helper
+            $validated['qr_image_url'] = QrCodeHelper::generateAndSave(
+                $validated['qr_code'],
+                $validated['qr_code']
+            );
 
             $user = User::create($validated);
             $token = $user->createToken('auth_token')->plainTextToken;
@@ -56,6 +62,7 @@ class AuthController extends Controller
             return ResponseHelper::serverError('Registration failed: ' . $e->getMessage());
         }
     }
+
     /**
      * Store a newly created resource in storage.
      */

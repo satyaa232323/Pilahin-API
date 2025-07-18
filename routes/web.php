@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Web\WebAdminController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,14 +25,7 @@ Route::middleware(['web.auth'])->group(function () {
         return view('pages.scanUser');
     })->name('input');
 
-    Route::get('/user-data', function () {
-        return view('pages.UserData');
-    })->name('user-data');
-
-    Route::get('/trash-data', function () {
-        return view('pages.TrashData');
-    })->name('trash-data');
-
+   
     // API endpoints for web admin
     Route::post('/api/scan-qr', [WebAdminController::class, 'scanQr'])->name('scan-qr');
     Route::post('/api/submit-waste', [WebAdminController::class, 'submitWaste'])->name('submit-waste');

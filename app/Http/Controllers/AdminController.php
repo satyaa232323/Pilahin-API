@@ -16,11 +16,16 @@ class AdminController extends Controller
                 'qr_code' => 'required|string',
             ]);
 
-            // check if authenticated is admin
             $admin = $request->user();
-            if ($admin->role !== 'admin') {
-                return ResponseHelper::forbidden('Olny admin and superadmin can scan QR codes');
+
+            if($admin->role !== 'admin' && $admin->role !== 'superadmin') {
+                return ResponseHelper::forbidden('Only admin and superadmin can scan QR codes');
             }
+
+
+            // 
+
+           
 
             // find user by QR code
             $user = User::where('qr_code', $validated['qr_code'])->first();
@@ -45,6 +50,8 @@ class AdminController extends Controller
                 'scan_time' => now()
             ];
             return ResponseHelper::success('User profile retrieved successfully', $userProfile);
+
+            
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseHelper::validationError('Validation failed', $e->errors());
         } catch (\Exception $e) {

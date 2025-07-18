@@ -28,7 +28,7 @@ class AdminSeeder extends Seeder
                 'name' => 'Admin tamvan',
                 'email' => 'admin@gmail.com',
                 'phone' => '0123456789',
-                'password' => bcrypt('admin123'),
+                'password' => bcrypt(value: 'admin123'),
                 'qr_code' => 'admin123', // Store the original data instead of image
                 'qr_image_url' => 'storage/qr_codes/admin.png',
                 'role' => 'admin',

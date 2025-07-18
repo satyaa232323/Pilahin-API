@@ -5,7 +5,7 @@
           <div class="sidebar-brand-icon rotate-n-15">
               <i class="fas fa-laugh-wink"></i>
           </div>
-          <div class="sidebar-brand-text mx-3">Pilahin </div>
+          <div class="sidebar-brand-text mx-3">Pilahin Point</div>
       </a>
 
       <!-- Divider -->
@@ -33,21 +33,6 @@
               <span>Scan User & Input Sampah</span>
           </a>
       </li>
-
-      <li class="nav-item">
-          <a class="nav-link" href="{{ route('user-data') }}">
-              <i class="fas fa-fw fa-users"></i>
-              <span>Data User</span>
-          </a>
-      </li>
-
-      <li class="nav-item">
-          <a class="nav-link" href="{{ route('trash-data') }}">
-              <i class="fas fa-fw fa-trash"></i>
-              <span>Data Sampah</span>
-          </a>
-      </li>
-
       <!-- Nav Item - Utilities Collapse Menu -->
 
   </ul>

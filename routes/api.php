@@ -23,6 +23,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/qr/image', [UserController::class, 'getQrImage']);
 
      Route::get('/vouchers', [UserController::class, 'index']);
+    Route::get('/vouchers/redeemed', [UserController::class, 'redeemVouchers']);
     Route::post('/vouchers/redeem', [UserController::class, 'redeem']);
 
 

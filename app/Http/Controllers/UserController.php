@@ -151,25 +151,42 @@ class UserController extends Controller
 
 // Redeem Voucher
 
-public function redeemVoucher(Request $request)
+public function redeemVouchers(Request $request)
 {
     $user = Auth::user(); // ✅ Ambil user dari token
     $voucher = Voucher::find($request->voucher_id);
-
-    if (!$voucher) {
+  if (!$voucher) {
         return response()->json([
             'success' => false,
             'message' => 'Voucher tidak ditemukan',
+            'data' => []
         ], 200);
     }
-
+    
     if ($user->points < $voucher->required_points) {
         return response()->json([
             'success' => false,
             'message' => 'Poin tidak mencukupi untuk redeem voucher ini',
         ], 400);
     }
-    
+
+    // Kurangi poin user
+    $user->points -= $voucher->required_points;
+    $user->save;
+
+    // Simpan ke tabel redeemed_vouchers
+    $redeemedVoucher = Redeemed_vouchers::create([
+        'user_id' => $user->id,
+        'voucher_id' => $voucher->id,
+        'redeemed_at' => now(),
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Voucher berhasil diredeem',
+        'data' => $redeemedVoucher,
+    ], 200);
+
 }
   public function redeem(Request $request)
 {
